@@ -1,0 +1,25 @@
+{
+  "name": "sw-image-helper",
+  "version": "0.0.1",
+  "description": "This library replaces image URLs in the service worker with the optimal image for the user.",
+  "keywords": [
+    "service worker",
+    "sw",
+    "image",
+    "dpr",
+    "webp",
+    "jpgxr",
+  ],
+  "files": [
+    "src",
+    "build"
+  ],
+  "author": "Google's Web DevRel Team",
+  "license": "Apache-2.0",
+  "repository": "googlechrome/sw-helpers",
+  "bugs": "https://github.com/googlechrome/sw-helpers/issues",
+  "homepage": "https://github.com/GoogleChrome/sw-helpers/tree/master/packages/sw-image-helper",
+  "main": "build/sw-image-helper.min.js",
+  "module": "build/sw-image-helper.min.mjs",
+  "jsnext:main": "build/sw-image-helper.min.mjs"
+}

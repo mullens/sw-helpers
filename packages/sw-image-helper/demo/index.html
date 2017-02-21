@@ -1,0 +1,42 @@
+<html>
+  <head>
+    <title>Service Worker Image Helper Demo</title>
+    <link rel="stylesheet" href="index.css">
+  </head>
+  <body>
+    <img src="owl.2x.jpg">
+    <img src="social.2x.png">
+    <script>
+      if (window.indexedDB) {
+        var dbOpenRequest = window.indexedDB.open('image-helper', 1);
+        dbOpenRequest.onupgradeneeded = () => {
+          dbOpenRequest.result.createObjectStore('info', {keyPath: 'id'});
+        }
+        dbOpenRequest.onsuccess = () => {
+          if (window.devicePixelRatio) {
+            var transaction =
+                dbOpenRequest.result.transaction(['info'], 'readwrite');
+            var objectStore = transaction.objectStore('info');
+            objectStore.put({id: 'dpr', value: window.devicePixelRatio});
+          }
+        }
+      }
+
+    // const dbOpenRequest2 = indexedDB.open('image-helper', 1);
+    // dbOpenRequest2.onsuccess = () => {
+    //   var transaction =
+    //       dbOpenRequest.result.transaction(['info'], 'readwrite');
+    //   var objectStore = transaction.objectStore('info');
+    //   var objectStoreRequest = objectStore.get('dpr');
+    //   objectStoreRequest.onsuccess = (event) => {
+    //     this.dpr = objectStoreRequest.result.value;
+    //     console.log(this.dpr);
+    //   }
+    // }
+      // Register our service worker.
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('service-worker.js');
+      }
+    </script>
+  </body>
+</html>
