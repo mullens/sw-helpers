@@ -1,3 +1,4 @@
+/**
 const proxyquire = require('proxyquire');
 const sinon = require('sinon');
 const cliHelper = require('./helpers/cli-test-helper.js');
@@ -5,9 +6,10 @@ const errors = require('../src/lib/errors.js');
 
 require('chai').should();
 
+
 describe('Ask for File Manifest Name', function() {
   const globalStubs = [];
-  const CLI_PATH = '../build/cli/index.js';
+  const CLI_PATH = '../build/index.js';
 
   afterEach(function() {
     cliHelper.endLogCapture();
@@ -132,3 +134,4 @@ describe('Ask for File Manifest Name', function() {
     });
   });
 });
+**/

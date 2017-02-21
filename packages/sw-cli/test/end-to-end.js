@@ -3,7 +3,7 @@ const path = require('path');
 const fs = require('fs');
 const vm = require('vm');
 const glob = require('glob');
-const fse = require('fs-extra');
+const fsExtra = require('fs-extra');
 const expect = require('chai').expect;
 const url = require('url');
 const seleniumAssistant = require('selenium-assistant');
@@ -11,10 +11,12 @@ const testServer = require('../../../utils/test-server.js');
 
 require('chai').should();
 
-describe('Test Example Projects', function() {
+describe('End-to-End Tests', function() {
   let tmpDirectory;
   let globalDriverBrowser;
   let baseTestUrl;
+  // NOTE: No JPG
+  const FILE_EXTENSIONS = ['html', 'css', 'js', 'png'];
 
   // Kill the web server once all tests are complete.
   after(function() {
@@ -34,7 +36,7 @@ describe('Test Example Projects', function() {
   afterEach(function() {
     this.timeout(10 * 1000);
 
-    fse.removeSync(tmpDirectory);
+    fsExtra.removeSync(tmpDirectory);
 
     return seleniumAssistant.stopSaucelabsConnect()
     .then(() => {
@@ -49,60 +51,9 @@ describe('Test Example Projects', function() {
     });
   });
 
-  it('should be able to generate a service for example-1', function() {
-    this.timeout(60 * 1000);
-
-    fse.copySync(
-      path.join(__dirname, 'example-projects', 'example-1'),
-      tmpDirectory);
-
-    const exampleProject = tmpDirectory;
-    const relativeProjPath = path.relative(process.cwd(), exampleProject);
-
-    // NOTE: No JPG
-    const fileExntensions = ['html', 'css', 'js', 'png'];
-
-    const manifestName = `${Date.now()}-manifest.js`;
-    const swName = `${Date.now()}-sw.js`;
-
-    const SWCli = proxyquire('../build/cli/index', {
-      inquirer: {
-        prompt: (questions) => {
-          switch (questions[0].name) {
-            case 'rootDir':
-              return Promise.resolve({
-                rootDir: relativeProjPath,
-              });
-            case 'cacheExtensions':
-              return Promise.resolve({
-                cacheExtensions: fileExntensions,
-              });
-            case 'fileManifestName':
-              return Promise.resolve({
-                fileManifestName: manifestName,
-              });
-            case 'serviceWorkerName':
-              return Promise.resolve({
-                serviceWorkerName: swName,
-              });
-            case 'saveConfig':
-              return Promise.resolve({
-                saveConfig: false,
-              });
-            default:
-              console.error('');
-              console.error(`Unknown question: ${questions[0].name}`);
-              console.error('');
-              return Promise.reject();
-          }
-        },
-      },
-    });
-
+  const performTest = (generateSWCb, {exampleProject, swName}) => {
     let fileManifestOutput;
-
-    const cli = new SWCli();
-    return cli.handleCommand('generate-sw')
+    return generateSWCb()
     .then(() => {
       const injectedSelf = {
         goog: {
@@ -129,16 +80,12 @@ describe('Test Example Projects', function() {
       // Check the manifest is defined by the manifest JS.
       expect(fileManifestOutput).to.exist;
 
-      const swlibPkg = require(
-        path.join(__dirname, '..', 'node_modules', 'sw-lib', 'package.json'));
-
       // Check the files that we expect to be defined are.
       let expectedFiles = glob.sync(
-        `${exampleProject}/**/*.{${fileExntensions.join(',')}}`, {
+        `${exampleProject}/**/*.{${FILE_EXTENSIONS.join(',')}}`, {
         ignore: [
-          `${exampleProject}/${manifestName}`,
           `${exampleProject}/${swName}`,
-          `${exampleProject}/sw-lib.v${swlibPkg.version}.min.js`,
+          `${exampleProject}/sw-lib.*.min.js`,
         ],
       });
       expectedFiles = expectedFiles.map((file) => {
@@ -175,7 +122,7 @@ describe('Test Example Projects', function() {
     })
     .then(() => {
       // Rerun and ensure the sw and sw-lib files are excluded from the output.
-      return cli.handleCommand('generate-sw');
+      return generateSWCb();
     })
     .then(() => {
       const injectedSelf = {
@@ -198,11 +145,6 @@ describe('Test Example Projects', function() {
         importScripts: () => {
           // NOOP
         },
-      });
-      fileManifestOutput.forEach((manifestEntry) => {
-        if (manifestEntry.url === `/${manifestName}`) {
-          throw new Error('The manifest itself was not excluded from the generated file manifest.');
-        }
       });
     })
     .then(() => {
@@ -279,6 +221,68 @@ describe('Test Example Projects', function() {
 
         pathnames.length.should.equal(0);
       });
+    });
+  };
+
+  it('should be able to generate a service for example-1 with CLI', function() {
+    this.timeout(60 * 1000);
+
+    fsExtra.copySync(
+      path.join(__dirname, 'example-projects', 'example-1'),
+      tmpDirectory);
+
+    const relativeProjPath = path.relative(process.cwd(), tmpDirectory);
+
+    const swName = `${Date.now()}-sw.js`;
+
+    const SWCli = proxyquire('../build/index', {
+      './lib/questions/ask-root-of-web-app': () => {
+        return Promise.resolve(relativeProjPath);
+      },
+      './lib/questions/ask-sw-name': () => {
+        return Promise.resolve(swName);
+      },
+      './lib/questions/ask-save-config': () => {
+        return Promise.resolve(false);
+      },
+      './lib/questions/ask-extensions-to-cache': () => {
+        return Promise.resolve(FILE_EXTENSIONS);
+      },
+      /** inquirer: {
+        prompt: (questions) => {
+          switch (questions[0].name) {
+            case 'rootDir':
+              return Promise.resolve({
+                rootDir: relativeProjPath,
+              });
+            case 'cacheExtensions':
+              return Promise.resolve({
+                cacheExtensions: FILE_EXTENSIONS,
+              });
+            case 'serviceWorkerName':
+              return Promise.resolve({
+                serviceWorkerName: swName,
+              });
+            case 'saveConfig':
+              return Promise.resolve({
+                saveConfig: false,
+              });
+            default:
+              console.error('');
+              console.error(`Unknown question: ${questions[0].name}`);
+              console.error('');
+              return Promise.reject();
+          }
+        },
+      },**/
+    });
+
+    const cli = new SWCli();
+    return performTest(() => {
+      return cli.handleCommand('generate-sw');
+    }, {
+      exampleProject: tmpDirectory,
+      swName,
     });
   });
 });
