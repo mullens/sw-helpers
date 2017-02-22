@@ -37,10 +37,9 @@ class ImageHelper {
     }
   }
 
-  addDPRSupport(find = '2x') {
+  addDPRSupport(find = '2x', sizes = {1: '1x', 2: '2x'}) {
     // Create a promise to let getResponse wait for this
     this.dprPromise = new Promise((resolveDprPromise, rejectDprPromise) => {
-      // TODO(mullens): Don't do this for every request
       const dbOpenRequest = indexedDB.open('image-helper', 1);
       return new Promise((resolve, reject) => {
         dbOpenRequest.onerror = () => rejectDprPromise();
@@ -51,8 +50,25 @@ class ImageHelper {
         let objectStoreRequest = objectStore.get('dpr');
         objectStoreRequest.onerror = () => rejectDprPromise();
         objectStoreRequest.onsuccess = () => {
-          let dpr = objectStoreRequest.result.value + 'x';
-          this.replace(find, dpr);
+          let dpr = objectStoreRequest.result.value;
+
+          // Can't sort an object literal, so use an array of tuples
+          let sizesArray = [];
+          for (let key in sizes) {
+            if (sizes.hasOwnProperty(key)) {
+              sizesArray.push([key, sizes[key]]);
+            }
+          }
+          sizesArray.sort((a, b) => a[0] - b[0]);
+
+          let bestDprString;
+          for (let size of sizesArray) {
+            if (size[0] <= dpr) {
+              bestDprString = size[1];
+            }
+          }
+
+          this.replace(find, bestDprString);
           resolveDprPromise();
         }
       });
