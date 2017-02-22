@@ -12,9 +12,10 @@ self.addEventListener('activate', () => self.clients.claim());
 
 
 self.addEventListener('fetch', function(event) {
-  let imageHelper = new ImageHelper(event, () => {
-    imageHelper.addWebPSupport();
-    imageHelper.addDPRSupport();
-    event.respondWith(fetch(imageHelper.getUrl()));
-  });
+  let imageHelper = new ImageHelper(event);
+
+  imageHelper.addWebPSupport();
+  imageHelper.addDPRSupport();
+
+  event.respondWith(imageHelper.getResponse());
 });

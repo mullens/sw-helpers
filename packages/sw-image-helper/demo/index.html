@@ -4,8 +4,8 @@
     <link rel="stylesheet" href="index.css">
   </head>
   <body>
-    <img src="owl.2x.jpg">
-    <img src="social.2x.png">
+    <img src="owl.2x.jpg" width="64">
+    <img src="social.2x.png" width="64">
     <script>
       if (window.indexedDB) {
         var dbOpenRequest = window.indexedDB.open('image-helper', 1);
@@ -22,17 +22,6 @@
         }
       }
 
-    // const dbOpenRequest2 = indexedDB.open('image-helper', 1);
-    // dbOpenRequest2.onsuccess = () => {
-    //   var transaction =
-    //       dbOpenRequest.result.transaction(['info'], 'readwrite');
-    //   var objectStore = transaction.objectStore('info');
-    //   var objectStoreRequest = objectStore.get('dpr');
-    //   objectStoreRequest.onsuccess = (event) => {
-    //     this.dpr = objectStoreRequest.result.value;
-    //     console.log(this.dpr);
-    //   }
-    // }
       // Register our service worker.
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('service-worker.js');

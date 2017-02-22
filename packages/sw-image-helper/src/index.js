@@ -20,31 +20,12 @@
  */
 
 class ImageHelper {
-  constructor(event, callback) {
+  constructor(event) {
     this.event = event;
     this.url = this.event.request.url;
-
-    // TODO(mullens): Don't do this for every request
-    const dbOpenRequest = indexedDB.open('image-helper', 1);
-
-    var promise = new Promise(function(resolve, reject) {
-      dbOpenRequest.onerror = () => resolve();
-      dbOpenRequest.onsuccess = () => resolve(dbOpenRequest.result);
-    }).then((result) => {
-        var transaction = result.transaction(['info'], 'readwrite');
-        var objectStore = transaction.objectStore('info');
-        var objectStoreRequest = objectStore.get('dpr');
-        objectStoreRequest.onerror = () => resolve();
-        objectStoreRequest.onsuccess = () => {
-          this.dpr = objectStoreRequest.result.value;
-          console.log('wooo' + this.dpr);
-          resolve();
-        }
-    }).then(callback);
   }
 
   addWebPSupport(find = ['.jpg', '.png'], replaceWith = '.webp') {
-    console.log('foo' + this.dpr);
     if (this._isInAcceptHeader('image/webp')) {
       this.replace(find, replaceWith);
     }
@@ -56,14 +37,36 @@ class ImageHelper {
     }
   }
 
-  addDPRSupport(find = ['.jpg', '.png'], replaceWith = '.jxr') {
-    if (this._isInAcceptHeader('image/jxr')) {
-      this.replace(find, replaceWith);
-    }
+  addDPRSupport(find = '2x') {
+    // Create a promise to let getResponse wait for this
+    this.dprPromise = new Promise((resolveDprPromise, rejectDprPromise) => {
+      // TODO(mullens): Don't do this for every request
+      const dbOpenRequest = indexedDB.open('image-helper', 1);
+      return new Promise((resolve, reject) => {
+        dbOpenRequest.onerror = () => rejectDprPromise();
+        dbOpenRequest.onsuccess = () => resolve(dbOpenRequest.result);
+      }).then((result) => {
+        let transaction = result.transaction(['info'], 'readwrite');
+        let objectStore = transaction.objectStore('info');
+        let objectStoreRequest = objectStore.get('dpr');
+        objectStoreRequest.onerror = () => rejectDprPromise();
+        objectStoreRequest.onsuccess = () => {
+          let dpr = objectStoreRequest.result.value + 'x';
+          this.replace(find, dpr);
+          resolveDprPromise();
+        }
+      });
+    });
   }
 
-  getUrl() {
-    return this.url;
+  getResponse() {
+    // Wait for addDPRSupport to finish
+    if (this.dprPromise) {
+      // We load whatever URL we have, regardless if no DPR was in IDB
+      return this.dprPromise.then(() => fetch(this.url), () => fetch(this.url));
+    } else {
+      return fetch(this.url);
+    }
   }
 
   replace(find, replaceWith) {
@@ -72,11 +75,11 @@ class ImageHelper {
     }
 
     find.forEach(
-        (pattern) => this.url = this.url.replace(pattern, replaceWith));
+      (pattern) => this.url = this.url.replace(pattern, replaceWith));
   }
 
   _isInAcceptHeader(str) {
     return (this.event.request.headers.get('accept') &&
-            this.event.request.headers.get('accept').includes(str));
+      this.event.request.headers.get('accept').includes(str));
   }
 }
